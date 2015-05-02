@@ -10,5 +10,5 @@ Senado
 
 O Senado Federal do Brasil disponibiliza seus dados atráves de uma interface **REST** no portal [Serviços de dados abertos do Senado Federal](http://legis.senado.gov.br/dadosabertos/docs/index.html). Neste portal, há uma séries de recursos disponíveis, dos quais mapeei ainda alguns poucos, incluindo o /senador/{codigo}/historico e /senador/lista/legislatura/{legislatura}. Com estes recursos foi possível estabelecer as classes Senador, Legislatura, Matéria e Mandato. O uso das mesmas será descrito em uma série de *notebooks* no formato Jupyter. Os primeiros da série podem ser encontrados no código fonte. Sua visualização pode ser feita através destes links:
 
-1. [Introdução ao congresso.senado](https://bitbucket.org/cdacosta/congresso/raw/master/congresso/senado/notebooks/html/1. Introdução ao congresso.senado.html)
-2. [Explorando o congresso.senado](https://bitbucket.org/cdacosta/congresso/raw/master/congresso/senado/notebooks/html/2. Explorando o congresso.senado.html)
+1. [Introdução ao congresso.senado](https%3A%2F%2Fbitbucket.org%2Fcdacosta%2Fcongresso%2Fraw%2Fmaster%2Fcongresso%2Fsenado%2Fnotebooks%2Fhtml%2F1.%20Introdu%C3%A7%C3%A3o%20ao%20congresso.senado.html)
+2. [Explorando o congresso.senado](https%3A%2F%2Fbitbucket.org%2Fcdacosta%2Fcongresso%2Fraw%2Fmaster%2Fcongresso%2Fsenado%2Fnotebooks%2Fhtml%2F2.%20Explorando%20o%20congresso.senado.html)
