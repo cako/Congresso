@@ -15,6 +15,7 @@ LEGFINS = [1829, 1833, 1837, 1841, 1844, 1847, 1849, 1852, 1856, 1860, 1863,
            1896, 1899, 1902, 1905, 1908, 1911, 1915, 1917, 1920, 1923, 1926,
            1929, 1930, 1934, 1937, 1951, 1955, 1959, 1963, 1967, 1970, 1974,
            1978, 1983, 1987, 1991, 1995, 1999, 2003, 2007, 2010, 2015, 2019]
+
 class Fetcher:
     """
     Define uma classe genérica Fetcher. Faz interface com o recursos
@@ -240,22 +241,26 @@ class Senador(Fetcher):
             return 1
 
         # Processa dados do parlamentar
+        atrs = ('nome', 'sexo', 'UF')
+        atrs_xml = ('NomeParlamentar', 'Sexo', 'SiglaUfNatural')
+
+        atrs_md = ('_uf', '_legini', '_legfim', '_anoini', '_anofim', '_tit',
+                  '_url')
+        atrs_md_xml = ('SiglaUF', 'LegislaturaInicio', 'LegislaturaFim',
+                      'AnoInicio', 'AnoFim', 'TitularSuplente',
+                      'PaginaNoMandato')
+
+        atrs_mt = ('tipo', 'num', 'ano', 'ementa')
+        atrs_mt_xml = ('SiglaMateria', 'NumeroMateria', 'AnoMateria', 'Ementa')
+
         for campo in parlamentar:
-            # Cria lista ['PT', 'PSB'] contendo os partidos dos quais o
-            # parlamentar foi membro
             tag = campo.tag
             txt = campo.text
-            if tag == 'NomeParlamentar':
-                self.nome = txt
-            elif tag == 'NomeCompleto':
+            if tag == 'NomeCompleto':
                 if self.nome is None:
                     self.nome = txt
-            elif tag == 'Sexo':
-                self.sexo = txt
             elif tag == 'DataNascimento':
                 self.dn = dt.strptime(txt, '%Y-%m-%d')
-            elif tag == 'SiglaUfNatural':
-                self.UF = txt
             elif tag == 'Partidos':
                 for part in campo:
                     try:
@@ -268,47 +273,29 @@ class Senador(Fetcher):
             elif tag == 'Mandatos':
                 self.mandatos = []
                 for mandato in campo:
-                    uf = legini = legfim = anoini = anofim = tit = url = None
+                    for atr in atrs:
+                        setattr(self, atr, None)
                     for cp in mandato:
-                        if cp.tag == 'SiglaUF':
-                            uf = cp.text
-                        elif cp.tag == 'LegislaturaInicio':
-                            legini = cp.text
-                        elif cp.tag == 'LegislaturaFim':
-                            legfim = cp.text
-                        elif cp.tag == 'AnoInicio':
-                            anoini = cp.text
-                        elif cp.tag == 'AnoFim':
-                            anofim = cp.text
-                        elif cp.tag == 'TitularSuplente':
-                            tit = cp.text
-                        elif cp.tag == 'PaginaNoMandato':
-                            url = cp.text
-                    self.mandatos.append(Mandato(uf, legini, legfim, anoini,
-                                                 anofim, tit, url))
+                        try:
+                            setattr(self, atrs_md[atrs_md_xml.index(cp.tag)], cp.text)
+                        except ValueError:
+                            pass
+                    self.mandatos.append(Mandato(self._uf, self._legini,
+                                                 self._legfim, self._anoini,
+                                                 self._anofim, self._tit,
+                                                 self._url))
+                for atr in atrs_md:
+                    delattr(self, atr)
                 self.mandatos.sort()
             elif tag == 'MateriasDeAutoria': # ou 'Relatorias'
                 for mat in campo:
-                    cod = tipo = num = ano = ementa = None
-                    for camp in mat:
-                        tg = camp.tag
-                        tx = camp.text
-                        if tg == 'CodigoMateria':
-                            cod = int(tx)
-                        elif tg == 'SiglaMateria':
-                            tipo = tx
-                        elif tg == 'NumeroMateria':
-                            num  = tx
-                        elif tg == 'AnoMateria':
-                            ano = int(tx)
-                        elif tg == 'Ementa':
-                            ementa = tx
+                    m = Materia(mat[0].text) # Codigo
+                    for camp in mat[1:]:
+                        try:
+                            setattr(m, atrs_mt[atrs_mt_xml.index(camp.tag)], camp.text)
+                        except ValueError:
+                            pass
                     # Fix baselocal!
-                    m = Materia(cod)
-                    m.tipo = tipo
-                    m.num = num
-                    m.ano = ano
-                    m.ementa = ementa
                     self.materias.append(m)
                 self.materias.sort()
             #elif campo.tag == 'MembroComissao':
@@ -332,7 +319,10 @@ class Senador(Fetcher):
                     #voto = voto.text
                     #self.info['Votacoes'].append( (cod, voto) )
             else:
-                self.info[tag] = txt
+                try:
+                    setattr(self, atrs[atrs_xml.index(tag)], txt)
+                except ValueError:
+                    self.info[tag] = txt
         return 0
     _parse_xml.__doc__ = Fetcher._parse_xml.__doc__
 
@@ -346,8 +336,7 @@ class Mandato:
         self.UF = UF
         self.legini, self.legfim = int(legini), int(legfim)
         self.anoini, self.anofim = int(anoini), int(anofim)
-        self.T = None
-        self.S = None
+        self.T, self.S = None, None
         if tit is not None:
             if tit.lower()[0] != 't': # Titular
                 self.T = False
@@ -416,7 +405,7 @@ class Materia(Fetcher):
                     tag = cp.tag
                     txt = cp.text
                     if tag == 'AnoMateria':
-                        self.ano = int(2013)
+                        self.ano = int(txt)
                     elif tag == 'IndicadorTramitando':
                         self.T = True if txt.lower() == 'sim' else False
                     elif tag == 'NumeroMateria':
@@ -433,20 +422,20 @@ class Materia(Fetcher):
                         self.data = dt.strptime(txt, '%Y-%m-%d')
             elif campo.tag == 'Autoria':
                 for autor in campo:
-                        for cp in autor:
-                            if cp.tag == 'IdentificacaoParlamentar':
-                                for c in cp:
-                                    if c.tag == 'CodigoParlamentar':
-                                        cod = int(c.text)
-                                    elif c.tag == 'NomeParlamentar':
-                                        nome = c.text
-                                    elif c.tag == 'SexoParlamentar':
-                                        sexo = c.text
-                                    elif c.tag == 'UfParlamentar':
-                                        uf = c.text
-                        sen = Senador(cod)
-                        sen.nome, sen.sexo, sen.UF = nome, sexo, uf
-                        self.autores.append(sen)
+                    for cp in autor:
+                        if cp.tag == 'IdentificacaoParlamentar':
+                            for c in cp:
+                                if c.tag == 'CodigoParlamentar':
+                                    cod = int(c.text)
+                                elif c.tag == 'NomeParlamentar':
+                                    nome = c.text
+                                elif c.tag == 'SexoParlamentar':
+                                    sexo = c.text
+                                elif c.tag == 'UfParlamentar':
+                                    uf = c.text
+                    sen = Senador(cod)
+                    sen.nome, sen.sexo, sen.UF = nome, sexo, uf
+                    self.autores.append(sen)
     _parse_xml.__doc__ = Fetcher._parse_xml.__doc__
 
 class Legislatura(Fetcher):
@@ -491,6 +480,10 @@ http://legis.senado.gov.br/dadosabertos/senador/lista/legislatura/{legislatura}
             return 1
 
         # Processa dados do parlamentar
+        atrs = ('nome', 'sexo', '_uf', '_legini', '_legfim', '_anoini', '_anofim')
+        atrs_xml = ('NomeParlamentar', 'SexoParlamentar', 'SiglaUF',
+                    'LegislaturaInicio', 'LegislaturaFim', 'AnoInicio',
+                    'AnoFim')
         for par in parlamentares:
             try:
                 cod = int(par.get('id'))
@@ -499,17 +492,12 @@ http://legis.senado.gov.br/dadosabertos/senador/lista/legislatura/{legislatura}
             # Sobe dois diretórios
             baselocal = os.path.split(os.path.split(self._baselocal)[0])[0]
             sen = Senador(cod, baselocal=baselocal)
-            uf = legini = legfim = anoini = anofim = None
             for campo in par[1:]:
                 tag = campo.tag
                 txt = campo.text
-                if tag == 'NomeParlamentar':
-                    sen.nome = txt
-                elif tag == 'NomeCompleto':
+                if tag == 'NomeCompleto':
                     if sen.nome is None:
                         sen.nome = txt
-                elif tag == 'SexoParlamentar':
-                    sen.sexo = txt
                 elif tag == 'Partidos':
                     sen.partidos = []
                     for part in campo:
@@ -520,19 +508,15 @@ http://legis.senado.gov.br/dadosabertos/senador/lista/legislatura/{legislatura}
                                 sen.partidos.append(part[0].text)
                             except (IndexError, AttributeError):
                                 pass
-                elif tag == 'SiglaUF':
-                    uf = txt
-                elif tag == 'LegislaturaInicio':
-                    legini = txt
-                elif tag == 'LegislaturaFim':
-                    legfim = txt
-                elif tag == 'AnoInicio':
-                    anoini = txt
-                elif tag == 'AnoFim':
-                    anofim = txt
                 else:
-                    sen.info[tag] = txt
-            sen.mandatos = [Mandato(uf, legini, legfim, anoini, anofim)]
+                    try:
+                        setattr(sen, atrs[atrs_xml.index(tag)], txt)
+                    except ValueError:
+                        sen.info[tag] = txt
+            sen.mandatos = [Mandato(sen._uf, sen._legini, sen._legfim,
+                                    sen._anoini, sen._anofim)]
+            for atr in atrs[2:]:
+                delattr(sen, atr)
             self.senadores.append(sen)
         return 0
     _parse_xml.__doc__ = Fetcher._parse_xml.__doc__
