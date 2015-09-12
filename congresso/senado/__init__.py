@@ -253,7 +253,7 @@ class Senador(Fetcher):
         atrs_mt = ('tipo', 'num', 'ano', 'ementa')
         atrs_mt_xml = ('SiglaMateria', 'NumeroMateria', 'AnoMateria', 'Ementa')
 
-        for campo in parlamentar:
+        for campo in parlamentar[1:]:
             tag = campo.tag
             txt = campo.text
             if tag == 'NomeCompleto':
@@ -273,7 +273,7 @@ class Senador(Fetcher):
             elif tag == 'Mandatos':
                 self.mandatos = []
                 for mandato in campo:
-                    for atr in atrs:
+                    for atr in atrs_md:
                         setattr(self, atr, None)
                     for cp in mandato:
                         try:
@@ -436,6 +436,8 @@ class Materia(Fetcher):
                     sen = Senador(cod)
                     sen.nome, sen.sexo, sen.UF = nome, sexo, uf
                     self.autores.append(sen)
+            elif campo.tag == 'OrigemMateria':
+                self.orig = campo[1].text.title()
     _parse_xml.__doc__ = Fetcher._parse_xml.__doc__
 
 class Legislatura(Fetcher):
@@ -475,48 +477,32 @@ http://legis.senado.gov.br/dadosabertos/senador/lista/legislatura/{legislatura}
 
         # Verifica se parlamentar existe
         try:
-            parlamentares = self.xml.getroot()[1][0]
+            parlamentares = self.xml.getroot()[1]
         except IndexError:
             return 1
 
         # Processa dados do parlamentar
-        atrs = ('nome', 'sexo', '_uf', '_legini', '_legfim', '_anoini', '_anofim')
-        atrs_xml = ('NomeParlamentar', 'SexoParlamentar', 'SiglaUF',
-                    'LegislaturaInicio', 'LegislaturaFim', 'AnoInicio',
-                    'AnoFim')
+        atrs = ('nome', 'sexo')
+        atrs_xml = ('NomeParlamentar', 'SexoParlamentar')
         for par in parlamentares:
             try:
-                cod = int(par.get('id'))
+                cod = int(par.find('IdentificacaoParlamentar').find('CodigoParlamentar').text)
             except TypeError:
                 continue
+
             # Sobe dois diretórios
             baselocal = os.path.split(os.path.split(self._baselocal)[0])[0]
             sen = Senador(cod, baselocal=baselocal)
-            for campo in par[1:]:
-                tag = campo.tag
-                txt = campo.text
-                if tag == 'NomeCompleto':
-                    if sen.nome is None:
-                        sen.nome = txt
-                elif tag == 'Partidos':
-                    sen.partidos = []
-                    for part in campo:
-                        try:
-                            sen.partidos.append(part.find('SiglaPartido').text)
-                        except AttributeError:
-                            try:
-                                sen.partidos.append(part[0].text)
-                            except (IndexError, AttributeError):
-                                pass
-                else:
-                    try:
-                        setattr(sen, atrs[atrs_xml.index(tag)], txt)
-                    except ValueError:
-                        sen.info[tag] = txt
-            sen.mandatos = [Mandato(sen._uf, sen._legini, sen._legfim,
-                                    sen._anoini, sen._anofim)]
-            for atr in atrs[2:]:
-                delattr(sen, atr)
+            for atr, atr_xml in zip(atrs, atrs_xml):
+                setattr(sen, atr, par.find('IdentificacaoParlamentar').find(atr_xml).text)
+            sen.mandatos = []
+            for mand in par.find('Mandatos'):
+                uf = mand.find("UfParlamentar").text
+                legini = int(mand.find("PrimeiraLegislaturaDoMandato").find('NumeroLegislatura').text)
+                legfim = int(mand.find("SegundaLegislaturaDoMandato").find('NumeroLegislatura').text)
+                tit = mandato.find('Titular').find('DescricaoParticipacao').text == 'Titular'
+                sen.mandatos.append(Mandato(
+                    uf, legini, legfim, LEGINIS[legini-1], LEGFINS[legfim-1]), tit)
             self.senadores.append(sen)
         return 0
     _parse_xml.__doc__ = Fetcher._parse_xml.__doc__
