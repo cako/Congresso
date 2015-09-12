@@ -500,9 +500,12 @@ http://legis.senado.gov.br/dadosabertos/senador/lista/legislatura/{legislatura}
                 uf = mand.find("UfParlamentar").text
                 legini = int(mand.find("PrimeiraLegislaturaDoMandato").find('NumeroLegislatura').text)
                 legfim = int(mand.find("SegundaLegislaturaDoMandato").find('NumeroLegislatura').text)
-                tit = mandato.find('Titular').find('DescricaoParticipacao').text == 'Titular'
+                try:
+                  tit = mand.find('Titular').find('DescricaoParticipacao').text[0]
+                except AttributeError:
+                  tit=None
                 sen.mandatos.append(Mandato(
-                    uf, legini, legfim, LEGINIS[legini-1], LEGFINS[legfim-1]), tit)
+                    uf, legini, legfim, LEGINIS[legini-1], LEGFINS[legfim-1], tit))
             self.senadores.append(sen)
         return 0
     _parse_xml.__doc__ = Fetcher._parse_xml.__doc__
