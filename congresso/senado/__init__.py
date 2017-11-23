@@ -242,7 +242,7 @@ class Senador(Fetcher):
 
         # Processa dados do parlamentar
         atrs = ('nome', 'sexo', 'UF')
-        atrs_xml = ('NomeParlamentar', 'Sexo', 'SiglaUfNatural')
+        atrs_xml = ('NomeParlamentar', 'SexoParlamentar', 'UfParlamentar')
 
         atrs_md = ('_uf', '_legini', '_legfim', '_anoini', '_anofim', '_tit',
                   '_url')
