@@ -204,6 +204,7 @@ class Senador(Fetcher):
         self.nome = self.dn = self.UF = self.sexo = self.M = self.F = None
         self.partidos = []
         self.materias = []
+        self.mandatos = []
         if fetch:
             self.get_info()
 
