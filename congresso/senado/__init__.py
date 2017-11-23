@@ -351,7 +351,7 @@ class Mandato:
         return self.legini < other.legini
 
     def __repr__(self):
-        rep = 'senado.Mandato({}, {}, {}, {}, {}, {})'
+        rep = 'senador.Mandato({}, {}, {}, {}, {}, {})'
         return rep.format(self.UF, self.legini, self.legfim, self.anoini,
                           self.anofim, self._tit, self.url)
 
